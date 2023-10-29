@@ -19,21 +19,22 @@
     <label>Enter Com PORT:</label>
     <input type="text" class="form-control col-md-2" name="com" id="comport">
     <input type="submit" name="submit" id="btn_show" class="btn btn-primary">
-    <h1>Live data from Arduino Sensor</h1>
+    <h1>afficher les donnee de temperature </h1>
 
     <p>La température est : {{ latest_temperature_data.temperature }} °C. Ces données ont été enregistrées à {{ latest_temperature_data.timestamp }}</p>
 
         </center>
 
     <div id="chartContainer" style="height: 450px; width:100%;"></div>
+    <p id="sensor-data">La température est : <span id="temperature">{{ latest_temperature_data.temperature }}</span> °C. Ces données ont été enregistrées à <span id="timestamp">{{ latest_temperature_data.timestamp }}</span></p>
 </body>
 <script>
 $("#btn_show").click(function(){
-    com=$("#comport").val();
+    var com=$("#comport").val();
     fill_graph_sensor(com);
 });
 
-function fill_graph_sensor() {
+function fill_graph_sensor(com) {
     var dps = []; // dataPoints
     var chart = new CanvasJS.Chart("chartContainer", {
         animationEnabled: true,
@@ -59,26 +60,40 @@ function fill_graph_sensor() {
     });
 
     var xVal = 0;
-    var yVal = 20;
+    var yVal = 300;
     var updateInterval = 5000;
-    var dataLength = 10;
+    var dataLength = 50;
 
-    var updateChart = function() {
+    function updateChart(data) {
         $.ajax({
             type: "get",
-            url: "{% url 'afficheTemperature' %}", // Requête vers votre vue d'affichage des températures
+            url: "{% url 'save_sensor_data' %}", // Requête vers votre vue d'affichage des températures
+            data :{
+                'id':com
+            },
             success: function(data) {
                 // Ici, data devrait contenir les données de température depuis la vue Django
+                if(data.temperature){
                 console.log(data);
                 // Mettez à jour le graphique avec les données de température
-                dps.push({
-                    x: Date.now(),
-                    y: data.temperature
-                });
+
+                 var timestamp = new Date(data.timestamp).getTime();
+                    var temperature = data.temperature;
+                    dps.push({
+                        x: timestamp,
+                        y: temperature
+                    });
+
                 if (dps.length > dataLength) {
                     dps.shift();
                 }
+                //mettre a jour le graphique 
                 chart.render();
+                 // Mettez à jour l'affichage des données sur la page
+                 $("#temperature").text(temperature);
+                $("#timestamp").text(data.timestamp);
+               
+                }
             },
             error: function() {
                 console.log("Erreur de requête AJAX");
