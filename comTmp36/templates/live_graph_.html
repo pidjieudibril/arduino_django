@@ -1,0 +1,94 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live Graph</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+        {% load static %}
+        <script src="{% static 'jquery-3.3.1.min.js' %}"></script>
+        <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+      
+
+</head>
+<body>
+    <center>
+    <label>Enter Com PORT:</label>
+    <input type="text" class="form-control col-md-2" name="com" id="comport">
+    <input type="submit" name="submit" id="btn_show" class="btn btn-primary">
+    <h1>Live data from Arduino Sensor</h1>
+
+    <p>La température est : {{ latest_temperature_data.temperature }} °C. Ces données ont été enregistrées à {{ latest_temperature_data.timestamp }}</p>
+
+        </center>
+
+    <div id="chartContainer" style="height: 450px; width:100%;"></div>
+</body>
+<script>
+$("#btn_show").click(function(){
+    com=$("#comport").val();
+    fill_graph_sensor(com);
+});
+
+function fill_graph_sensor() {
+    var dps = []; // dataPoints
+    var chart = new CanvasJS.Chart("chartContainer", {
+        animationEnabled: true,
+        title: {
+            text: "Live Data"
+        },
+        axisX: {
+            title: "Time"
+        },
+        axisY: {
+            title: "Temperature (°C)", // Modifiez le titre de l'axe Y
+            suffix: "°C"
+        },
+        data: [{
+            type: "line",
+            name: "Temperature",
+            connectNullData: true,
+            xValueType: "dateTime",
+            xValueFormatString: "DD MMM hh:mm TT",
+            yValueFormatString: "#,##0.##°C",
+            dataPoints: dps
+        }]
+    });
+
+    var xVal = 0;
+    var yVal = 20;
+    var updateInterval = 5000;
+    var dataLength = 10;
+
+    var updateChart = function() {
+        $.ajax({
+            type: "get",
+            url: "{% url 'afficheTemperature' %}", // Requête vers votre vue d'affichage des températures
+            success: function(data) {
+                // Ici, data devrait contenir les données de température depuis la vue Django
+                console.log(data);
+                // Mettez à jour le graphique avec les données de température
+                dps.push({
+                    x: Date.now(),
+                    y: data.temperature
+                });
+                if (dps.length > dataLength) {
+                    dps.shift();
+                }
+                chart.render();
+            },
+            error: function() {
+                console.log("Erreur de requête AJAX");
+            }
+        });
+    }
+
+    updateChart(dataLength);
+    setInterval(function() { updateChart() }, updateInterval);
+}
+
+</script>
+</html>
